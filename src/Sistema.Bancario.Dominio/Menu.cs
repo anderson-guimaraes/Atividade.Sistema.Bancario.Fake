@@ -1,68 +1,176 @@
-﻿
+﻿using Sistema.Bancario.Dominio.Classes;
 using Sistema.Bancario.Dominio.Enumerators;
-using Sistema.Bancario.Dominio.Helpers;
+using System.Collections.Generic;
 
 namespace Sistema.Bancario.Dominio
 {
     public class Menu
     {
-        public List<OpcaoMenu> Opcoes { get; private set; }
+        private static GerenciadoraClientes _gerenciadoraClientes;
+        private static GerenciadoraContas _gerenciadoraContas;
+        private static List<OpcaoMenu> _opcoesMenuBase;
 
-        public OpcaoMenu Escrever(List<OpcaoMenu> opcoes)
+        public Menu(List<OpcaoMenu> opcoesMenu)
         {
-            int index = 0;
+            _opcoesMenuBase = opcoesMenu;
+            InicializaSistemaBancario();
+        }
 
-            bool deveAguardarEscolha = true;
+        public void Exibir()
+        {
+            var opcao = new Opcao();
 
-            while (deveAguardarEscolha)
+            var aguardar = true;
+
+            while (aguardar)
             {
-                Console.Clear();
+                var opcaoEscolhida = opcao.Escrever(_opcoesMenuBase);
 
-                for (int i = 0; i < opcoes.Count; i++)
+                switch (opcaoEscolhida)
                 {
-                    if (i == index)
-                    {
-                        Console.BackgroundColor = ConsoleColor.Gray;
-                        Console.ForegroundColor = ConsoleColor.Black;
-                    }
-
-                    Console.WriteLine(EnumHelper.Description(opcoes[i]));
-                    Console.ResetColor();
-                }
-
-                ConsoleKeyInfo ckey = Console.ReadKey();
-
-                switch (ckey.Key)
-                {
-                    case ConsoleKey.Enter:
-                        deveAguardarEscolha = false;
+                    case OpcaoMenu.ConsularCliente:
+                        ConsultarCliente();
                         break;
-
-                    case ConsoleKey.UpArrow:
-                        if (index <= 0) index = opcoes.Count - 1;
-                        else index--;
-
+                    case OpcaoMenu.ConsultarContaCorrente:
+                        ConsultarConta();
                         break;
-
-                    case ConsoleKey.DownArrow:
-                    default:
-                        if (index == opcoes.Count - 1)
-                            index = 0;
-                        else
-                            index++;
-
+                    case OpcaoMenu.AtivarCliente:
+                        AtivarOuDesativarCiente(true);
+                        break;
+                    case OpcaoMenu.DesativarCliente:
+                        AtivarOuDesativarCiente(false);
+                        break;
+                    case OpcaoMenu.Sair:
+                        aguardar = false;
                         break;
                 }
             }
 
-            Console.Clear();
-
-            return opcoes[index];
+            Environment.Exit(0);
         }
 
-        public void ReescreverOpcoes(List<OpcaoMenu> opcoes)
+
+        private void ConsultarCliente()
         {
-            Opcoes = opcoes;
+            Console.Write("Digite o ID do cliente: ");
+
+            if (!int.TryParse(Console.ReadLine(), out int num))
+            {
+                Console.Clear();
+                ConsultarCliente();
+            }
+
+            var cliente = _gerenciadoraClientes.PesquisaCliente(num);
+
+            if (cliente != null)
+            {
+                Console.WriteLine(cliente.ToString());
+            }
+            else
+            {
+                Console.WriteLine(string.Empty);
+                Console.WriteLine("Cliente não encontrado!");
+            }
+
+            Voltar();
+        }
+
+        public void ConsultarConta()
+        {
+            Console.Write("Digite o ID da conta: ");
+
+            if (!int.TryParse(Console.ReadLine(), out int num))
+            {
+                Console.Clear();
+                ConsultarConta();
+            }
+
+            var conta = _gerenciadoraContas.PesquisaConta(num);
+
+            if (conta != null)
+            {
+                Console.Write(conta.ToString());
+            }
+            else
+            {
+                Console.WriteLine(string.Empty);
+                Console.WriteLine("Conta não encontrado!");
+            }
+
+            Voltar();
+        }
+
+        public void AtivarOuDesativarCiente(bool ativar)
+        {
+            Console.Write("Digite o ID do cliente: ");
+
+            if (!int.TryParse(Console.ReadLine(), out int num))
+            {
+                Console.Clear();
+                ConsultarConta();
+            }
+
+            var cliente = _gerenciadoraClientes.PesquisaCliente(num);
+
+            if (cliente != null)
+            {
+                cliente.MudarStatus(ativar);
+
+                var status = ativar ? "ativado" : "desativado";
+
+                Console.WriteLine($"Cliente {status} com sucesso!");
+            }
+            else
+            {
+                Console.WriteLine(string.Empty);
+                Console.WriteLine("Cliente não encontrado!");
+            }
+
+            Voltar();
+        }
+
+        private void Voltar()
+        {
+            Console.WriteLine(string.Empty);
+
+            Console.WriteLine("Backspace para voltar ao Menu.");
+
+            var aguardar = true;
+
+            while (aguardar)
+            {
+                var ckey = Console.ReadKey();
+
+                if (ckey.Key == ConsoleKey.Backspace)
+                {
+                    aguardar = false;
+                }
+            }
+
+            Exibir();
+        }
+
+
+        private void InicializaSistemaBancario()
+        {
+            var clientes = new List<Cliente>();
+            var contaCorrentes = new List<ContaCorrente>();
+
+            // criando e inserindo duas contas na lista de contas correntes do banco
+            var conta01 = new ContaCorrente(1, 0, true);
+            var conta02 = new ContaCorrente(2, 0, true);
+            contaCorrentes.Add(conta01);
+            contaCorrentes.Add(conta02);
+
+            // criando dois clientes e associando as contas criadas acima a eles
+            var cliente01 = new Cliente(1, "Gustavo Farias", 31, "gugafarias@gmail.com", conta01.Id, true);
+            var cliente02 = new Cliente(2, "Felipe Augusto", 34, "felipeaugusto@gmail.com", conta02.Id, true);
+            // inserindo os clientes criados na lista de clientes do banco
+            clientes.Add(cliente01);
+            clientes.Add(cliente02);
+
+            _gerenciadoraClientes = new GerenciadoraClientes(clientes);
+            _gerenciadoraContas = new GerenciadoraContas(contaCorrentes);
         }
     }
 }
